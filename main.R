@@ -1,7 +1,11 @@
+# Packages and options
 require(rstan)
-source('helper.R')
-c1 <- 'firebrick3'
-c2 <- 'steelblue3'
+require(ggplot2)
+require(bayesplot)
+source('functions.R')
+source('plotting.R')
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
 
 # Specify system and integrator here
 odeint_file <- 'stan/odefun_lotka-volterra.txt'
@@ -15,11 +19,20 @@ model <- stan_model(model_code = code)
 expose_stan_functions(model)
 
 # Simulate
-t_data <- seq(0.5,10,by=0.5)
+set.seed(123)
+t_data <- seq(0.5,12,by=0.5)
 y0     <- c(1,2)
 theta  <- c(1,1,1)
-Y_data <- odeint_wrap(y0, 0, t_data, theta)
+sigma  <- 0.2
+Y_data <- simulate(y0, t_data, theta, sigma)
 
-# Plot
-plot(t_data, Y_data[,1], 'o', lwd=2, pch=16, col = c1, xlab='t', ylab='y', main='Data')
-lines(t_data, Y_data[,2], 'o', lwd=2, pch=16, col =  c2)
+# Plot data
+plot_data(t_data, Y_data)
+
+# Fit
+stan_seed <- 123
+data <- create_stan_data(y0, t_data, Y_data, P=3)
+fit  <- sampling(model, data, seed = stan_seed)
+
+# Diagnose
+plot_chains(fit)

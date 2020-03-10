@@ -26,3 +26,21 @@ odeint_wrap <- function(y0, t0, t, theta){
   return(Y)
 }
 
+# Data simulation
+simulate <- function(y0, t_data, theta, sigma){
+  Y_data <- odeint_wrap(y0, 0, t_data, theta)
+  N <- dim(Y_data)[1]
+  D <- dim(Y_data)[2]
+  Y_data <- Y_data + matrix(rnorm(n=N*D, sd=sigma), N, D)
+  return(Y_data)
+}
+
+# Create data for Stan
+create_stan_data <- function(y0, t_data, Y_data, P){
+  N <- dim(Y_data)[1]
+  D <- dim(Y_data)[2]
+  t0 <- 0
+  out <- list(N=N, D=D, P=P, y0=y0, t0=t0, t=t_data, y=Y_data)
+  return(out)
+}
+
