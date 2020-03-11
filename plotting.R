@@ -1,34 +1,14 @@
 # Plot data
-plot_data <- function(t_data, Y_data, connect=TRUE){
-  N <- dim(Y_data)[1]
-  D <- dim(Y_data)[2]
-  Y_data <- as.numeric(Y_data)
-  t_data <- rep(t_data, D)
-  var <- as.factor(rep(paste("var", c(1:D)), each=N))
-  DF <- data.frame(var, t_data, Y_data)
-  colnames(DF) <- c("var", "t", "y")
-  plt <- ggplot(DF, aes(x=t, y=y,group=var)) + facet_wrap(.~var)
-  plt <- plt + geom_point() + theme_minimal()
-  if(connect){
-    plt <- plt + geom_line()
+plot_data <- function(t_data, Y_data){
+  par(mfrow=c(1,2), oma = c(0, 0, 2, 0), mar=c(4,2.5,2.5,2))
+  for(j in 1:2){
+    plot(t_data, Y_data[,j], 'o', pch=16, xlab='t', ylab='', main=paste0('y',j))
   }
-  return(plt)
-}
-
-# A color selector
-get_color <- function(idx){
-  if(idx==1){
-    color <- 'firebrick3'
-  }else if(idx==2){
-    color <- 'steelblue3'
-  }else{
-    stop("invalid idx")
-  }
-  return(color)
+  mtext("Simulated data", outer = TRUE, cex = 1.5)
 }
 
 # Traceplot for chains
-plot_chains <- function(fit, highlight=NULL, n_warmup=1000, ncol=2){
+plot_chains <- function(fit, highlight=NULL, n_warmup=500, ncol=2){
   ext <- rstan::extract(fit, inc_warmup=TRUE, permuted=FALSE)
   if(is.null(highlight)){
     plt <- mcmc_trace(ext, n_warmup = n_warmup, facet_args = list(ncol=ncol))
@@ -41,16 +21,16 @@ plot_chains <- function(fit, highlight=NULL, n_warmup=1000, ncol=2){
   return(plt)
 }
 
-# Test timing
-timing_test <- function(odeint_fun, t_data, y0, n_rep, h, fix_val=1){
-  th <- seq(h,2,by=h)
-  H  <- length(th)
-  th1 <- rep(th, each=H)
-  th2 <- rep(th, times=H)
-  th3 <- rep(fix_val, H*H)
-  THETA <- cbind(th1, th2, th3)
-  runtimes <- time_solves(odeint, y0, t_data, THETA, n_rep=n_rep)
-  df <- data.frame(th1, th2, runtimes)
-  plt <- ggplot(df, aes(x=th1, y=th2, z=runtimes)) + geom_contour_filled()
-  return(plt)
+# Visualize solutions against data
+plot_solutions <- function(t_data, Y_data, t_hat, Y_hat, alpha){
+  par(mfrow=c(1,2), oma = c(0, 0, 2, 0), mar=c(4,2.5,2.5,2))
+  K <- dim(Y_hat)[1]
+  for(j in 1:2){
+    plot(t_data, Y_data[,j], pch=16, xlab='t', ylab='', main=paste0('y',j))
+    for(k in 1:K){
+      lines(t_hat, Y_hat[k,,j], col = rgb(0.9,0.1,0.1,alpha=alpha))
+    }
+    points(t_data, Y_data[,j], pch=16, col='black')
+  }
+  mtext("Posterior solutions using RK45", outer = TRUE, cex = 1.5)
 }
