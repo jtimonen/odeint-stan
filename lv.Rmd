@@ -1,0 +1,121 @@
+---
+title: "Custom ODE solvers in Stan"
+author: "Juho Timonen"
+date: "3/11/2020"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libs, results=FALSE, warning=FALSE, message=FALSE}
+require(rstan)
+require(ggplot2)
+require(bayesplot)
+source('plotting.R')
+rstan_options(auto_write = TRUE)
+color_scheme_set("red")
+```
+
+## 1. Defining a toy system
+Here we study a Lotka-Volterra system defined as
+$$
+\begin{cases}
+\dot{x_1} &= x_1 - \theta_1 x_1 x_2 \\
+\dot{x_2} &= \theta_1 x_1 x_2- \theta_2 x_2
+\end{cases}
+$$
+with $x_1(0) = 1$ and $x_2(0) = 1.5$. We create a Stan model.
+```{r model1, cache=TRUE}
+# The ODE system and integrator are specified in these files
+odeint_file <- 'stan/odefun_lotka-volterra.txt'
+odefun_file <- 'stan/odeint_rk45-boost.txt'
+
+# This creates a complete stan program code from three parts
+# by adding a functions block to a base file
+create_stan_code <- function(odeint_file, odefun_file, base_file = 'stan/base.txt'){
+  base <- readLines(base_file)
+  base <- base[(12+1):length(base)] # remove comment rows from base
+  fun1 <- readLines(odeint_file)
+  fun2 <- readLines(odefun_file)
+  code <- paste(c('functions{', fun1, fun2, '}', base), collapse="\n")
+  return(code)
+}
+
+# Create model code and compile model
+code  <- create_stan_code(odeint_file, odefun_file)
+model <- stan_model(model_code = code)
+```
+
+We can expose its functions to R.
+```{r expose}
+# Expose odefun() and odeint() to R
+expose_stan_functions(model)
+```
+
+The model code looks like this:
+```{r code1, echo = FALSE}
+cat(code)
+```
+
+## 2. Simulating data
+We generate data on which we can test our inference.
+```{r sim, fig.width=6.5, fig.height=3}
+# Simulation setup
+set.seed(123)
+t_data <- seq(0.5,12,by=0.5)
+y0     <- c(1,2)     # initial state
+theta  <- c(1,1)     # true parameter values
+sigma  <- 0.2        # noise std
+N      <- length(t_data)
+D      <- length(y0)
+P      <- length(theta)
+
+# Convenience wrapper for a function obtained by expose_stan_functions
+odeint_wrap <- function(odeint_method, y0, t0, t, theta){
+  x_r <- x_i <- rep(0, 0)
+  Y   <- odeint_method(y0, t0, t, theta, x_r, x_i)
+  Y   <- matrix(unlist(Y), length(t), length(y0), byrow = TRUE)
+  return(Y)
+}
+
+# Create and plot data
+Y_data <- odeint_wrap(odeint, y0, 0, t_data, theta) + matrix(rnorm(n=N*D, sd=sigma), N, D)
+plot_data(t_data, Y_data)
+```
+
+## 3. Inference using RK45 from boost
+
+### 3.1 Fitting the model
+```{r fit1, fig.width=7.2, fig.height=5.5, cache=TRUE}
+# Formats data for Stan
+create_stan_data <- function(y0, t_data, Y_data, P){
+  N <- dim(Y_data)[1]
+  D <- dim(Y_data)[2]
+  out <- list(N=N, D=D, P=P, y0=y0, t0=0, t=t_data, y=Y_data)
+  return(out)
+}
+
+# Fit model
+stan_seed <- 12345
+data <- create_stan_data(y0, t_data, Y_data, P)
+fit  <- sampling(model, data, seed = stan_seed, refresh=0)
+print(fit)
+```
+
+We visualize the 4 chains
+```{r diag1, fig.width=7.2, fig.height=5.5}
+# Diagnose
+plot_chains(fit, ncol=2)
+```
+
+We see that one chain was much slower than others and spent much of the warmup time on an area with very log probability (`lp__`).
+```{r time1}
+print(get_elapsed_time(fit))
+```
+
+### 3.2 Visualizing solutions
+asd

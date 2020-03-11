@@ -27,8 +27,7 @@ sigma  <- 0.2
 N      <- length(t_data)
 D      <- length(y0)
 P      <- length(theta)
-Y_data <- odeint_wrap(y0, 0, t_data, theta)
-Y_data <- Y_data + matrix(rnorm(n=N*D, sd=sigma), N, D)
+Y_data <- odeint_wrap(odeint, y0, 0, t_data, theta) + matrix(rnorm(n=N*D, sd=sigma), N, D)
 
 # Plot data
 plot_data(t_data, Y_data)

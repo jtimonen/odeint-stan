@@ -1,4 +1,7 @@
 .Rhistory
 .Rdata
 .DS_Store
+lv_cache
+lv_files
+*.html
 

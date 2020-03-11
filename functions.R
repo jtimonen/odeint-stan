@@ -1,13 +1,4 @@
-# Creates a complete stan program code from three parts
-# by adding a functions block to a base file
-create_stan_code <- function(odeint_file, odefun_file, base_file = 'stan/base.txt'){
-  base <- readLines(base_file)
-  base <- base[(12+1):length(base)] # remove first rows from base
-  fun1 <- readLines(odeint_file)
-  fun2 <- readLines(odefun_file)
-  code <- paste(c('functions{', fun1, fun2, '}', base), collapse="\n")
-  return(code)
-}
+
 
 # Convenience wrapper for a function obtained by expose_stan_functions
 odeint_wrap <- function(odeint_method, y0, t0, t, theta){
