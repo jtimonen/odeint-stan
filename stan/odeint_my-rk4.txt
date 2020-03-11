@@ -1,0 +1,7 @@
+  // 4th order Runge-Kutta method
+  real[,] odeint(real[] y0, real t0, real[] t, real[] theta, real[] x_r, int[] x_i){
+    int D = num_elements(y0);
+    int N = num_elements(t);
+    real y_hat[N, D];
+    return y_hat;
+  }

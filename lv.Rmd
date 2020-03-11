@@ -154,4 +154,37 @@ plot_solutions(t_data, Y_data, t_hat, Y_hat, alpha=0.3)
 We plotted 100 randomly taken solutions including warmup.
 
 ## 4. Custom solver
+We now specify a different solver in `odefun_file`, create new model and expose the new `odeint` function to R.
+
+```{r model2, cache=FALSE}
+# The ODE system and integrator are specified in these files
+odeint_file <- 'stan/odefun_lotka-volterra.txt'
+odefun_file <- 'stan/odeint_my-rk4.txt'
+
+# This creates a complete stan program code from three parts
+# by adding a functions block to a base file
+create_stan_code <- function(odeint_file, odefun_file, base_file = 'stan/base.txt'){
+  base <- readLines(base_file)
+  base <- base[(12+1):length(base)] # remove comment rows from base
+  fun1 <- readLines(odeint_file)
+  fun2 <- readLines(odefun_file)
+  code <- paste(c('functions{', fun1, fun2, '}', base), collapse="\n")
+  return(code)
+}
+
+# Create model code and compile model
+code  <- create_stan_code(odeint_file, odefun_file)
+model <- stan_model(model_code = code)
+```
+
+We can expose its functions to R.
+```{r expose2}
+# Expose odefun() and odeint() to R
+expose_stan_functions(model)
+```
+
+The model code looks like this:
+```{r code2, echo = FALSE}
+cat(code)
+```
 
