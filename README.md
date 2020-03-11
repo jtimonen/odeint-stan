@@ -1,2 +1,3 @@
 # odeint-stan
-ODE problems in Stan
+ODE problems and custom solvers in Stan.
+
