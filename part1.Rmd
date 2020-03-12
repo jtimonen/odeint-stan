@@ -46,13 +46,19 @@ print(funs)
 ```
 The `odefun` function implements $f$. Functions `rk45_boost`, `euler`, `rk4`, `euler_fixed` and `rk4_fixed`  are ODE integration methods that call `odefun` several times.
 
-## 2. ODE solvers
-The ODE solvers can now be used as follows
-```{r solvers, fig.width=7.2, fig.height=4}
-t_out  <- seq(0.1,12,by=0.1)
+## 2. Using the exposed ODE solvers
+We first demonstrate how to use the RK45 method exposed to R:
+```{r solver1, fig.width=7.2, fig.height=3.5}
+t_out  <- seq(0.5,12,by=0.5)
 theta  <- c(1,1)     # parameter values
-
 y_out1 <- odeint(rk45_boost, y0, t0, t_out, theta)
+Y_out  <- list(y_out1)
+plot_traj(t_out, Y_out, c("RK45")) + scale_color_manual(values=c('gray35')) + geom_point()
+```
+
+## 3. ODE solvers with fixed time step
+The `_fixed` versions use a fixed time step and then linear interpolation to get the output at desired, possibly unequally spaced, time points.
+```{r solver2, fig.width=7.2, fig.height=4}
 y_out2 <- odeint(euler_fixed, y0, t0, t_out, theta, step_size = 0.2)
 y_out3 <- odeint(rk4_fixed, y0, t0, t_out, theta, step_size = 0.2)
 Y_out  <- list(y_out1, y_out2, y_out3)
@@ -60,6 +66,16 @@ plot_traj(t_out, Y_out, c(" RK45", "Euler (h=0.2)", " RK4 (h=0.2)")) + scale_col
 ```
 
 The output of RK45 and RK4 are indistinguishable in this case. Euler's method would need a much smaller step size (`h`) to get even close in terms of global error.
+
+## 4. ODE solvers with time step defined by output time points
+These solvers on the other hand determine the step size based on the desired output time points. Because our output time grid is equispaced with intervals $\Delta t = 0.5$, and we specify `n_steps_per_timepoint=2`, our step size will actually be fixed also here ($0.25$).
+
+```{r solver3, fig.width=7.2, fig.height=4}
+y_out4 <- odeint(euler, y0, t0, t_out, theta, n_steps_per_timepoint=2)
+y_out5 <- odeint(rk4, y0, t0, t_out, theta, n_steps_per_timepoint=2)
+Y_out  <- list(y_out1, y_out4, y_out5)
+plot_traj(t_out, Y_out, c(" RK45", "Euler", " RK4")) + scale_color_manual(values=c('gray35', 'firebrick2', 'steelblue3'))
+```
 
 ## sessionInfo
 ```{r end, fig.width=7.2, fig.height=3.5}
