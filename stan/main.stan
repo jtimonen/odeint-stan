@@ -38,7 +38,7 @@ functions{
   }
 
   // Forward Euler method
-  real[,] euler(real[] y0, real t0, real[] t, real[] theta, real[] x_r, int[] x_i, real h, int n_steps, int[] i_left){
+  real[,] euler_fixed(real[] y0, real t0, real[] t, real[] theta, real[] x_r, int[] x_i, real h, int n_steps, int[] i_left){
     int D = num_elements(y0);
     int N = num_elements(t);
     real y_hat[N, D];
@@ -53,10 +53,28 @@ functions{
     }
     y_hat = interpolate(h, i_left, t, y_grid);
     return y_hat;
-  }
+  } 
+  
+  // Forward Euler method but step size determined by time points
+  real[,] euler(real[] y0, real t0, real[] t, real[] theta, real[] x_r, int[] x_i,   int n_steps_per_timepoint){
+    int D = num_elements(y0);
+    int N = num_elements(t);
+    real t_curr = 0.0;
+    vector[D] y_curr = to_vector(y0);
+    matrix[D, N] y_hat = rep_matrix(0.0, D, N);
+    for(i in 1:N){
+      real h = (t[i] - t_curr)/n_steps_per_timepoint;
+      for(j in 1:n_steps_per_timepoint){
+        y_curr = y_curr + h*odefun_vec(t_curr, y_curr, theta, x_r, x_i);
+        t_curr = t_curr + h;
+      }
+      y_hat[:, i] = y_curr;
+    }
+    return to_array_2d(transpose(y_hat));
+  } 
   
     // A 4th order Runge-Kutta method
-  real[,] rk4(real[] y0, real t0, real[] t, real[] theta, real[] x_r, int[] x_i, real h, int n_steps, int[] i_left){
+  real[,] rk4_fixed(real[] y0, real t0, real[] t, real[] theta, real[] x_r, int[] x_i, real h, int n_steps, int[] i_left){
     int D = num_elements(y0);
     int N = num_elements(t);
     real y_hat[N, D];
@@ -81,6 +99,33 @@ functions{
     return y_hat;
   }
   
+      // A 4th order Runge-Kutta method but step size determined by time points
+  real[,] rk4(real[] y0, real t0, real[] t, real[] theta, real[] x_r, int[] x_i,
+  int n_steps_per_timepoint){
+    int D = num_elements(y0);
+    int N = num_elements(t);
+    real t_curr = 0.0;
+    vector[D] y_curr = to_vector(y0);
+    vector[D] k1;
+    vector[D] k2;
+    vector[D] k3;
+    vector[D] k4;
+    matrix[D, N] y_hat = rep_matrix(0.0, D, N);
+    for(i in 1:N){
+      real h = (t[i] - t_curr)/n_steps_per_timepoint;
+      for(j in 1:n_steps_per_timepoint){
+        k1 = h*odefun_vec(t_curr,       y_curr,        theta, x_r, x_i);
+        k2 = h*odefun_vec(t_curr + h/2, y_curr + k1/2, theta, x_r, x_i);
+        k3 = h*odefun_vec(t_curr + h/2, y_curr + k2/2, theta, x_r, x_i);
+        k4 = h*odefun_vec(t_curr + h,   y_curr + k3,   theta, x_r, x_i);
+        t_curr = t_curr + h;
+        y_curr = y_curr + (k1 + 2*k2 + 2*k3 + k4)/6;
+      }
+      y_hat[:, i] = y_curr;
+    }
+    return to_array_2d(transpose(y_hat));
+  }
+  
 }
 
 data{
@@ -94,10 +139,11 @@ data{
   real y0[D];     // initial state
   
   // Solver properties
-  int<lower=0,upper=2> method;
+  int<lower=0,upper=4> method;
   real<lower=0> step_size;
   int<lower=1> n_steps;
   int<lower=0> i_left[N];
+  int<lower=1> n_steps_per_timepoint;
 }
 
 transformed data{
@@ -115,9 +161,13 @@ model{
   if(method==0){
     y_hat = rk45_boost(y0, t0, t, theta, x_r, x_i);
   }else if(method==1){
-    y_hat = euler(y0, t0, t, theta, x_r, x_i, step_size, n_steps, i_left);
+    y_hat = euler(y0, t0, t, theta, x_r, x_i, n_steps_per_timepoint);
   }else if(method==2){
-    y_hat = rk4(y0, t0, t, theta, x_r, x_i, step_size, n_steps, i_left);
+    y_hat = euler_fixed(y0, t0, t, theta, x_r, x_i, step_size, n_steps, i_left);
+  }else if(method==3){
+    y_hat = rk4(y0, t0, t, theta, x_r, x_i, n_steps_per_timepoint);
+  }else if(method==4){
+    y_hat = rk4_fixed(y0, t0, t, theta, x_r, x_i, step_size, n_steps, i_left);
   }else{
     reject("unknown method")
   }

@@ -1,0 +1,67 @@
+---
+title: "Custom ODE solvers in Stan - Part 1"
+author: "Juho Timonen"
+date: "3/12/2020"
+output: 
+  html_vignette:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The R functions and `.stan` files used in this vignette can be found [here](https://github.com/jtimonen/odeint-stan).
+
+```{r libs, results=FALSE, warning=FALSE, message=FALSE}
+require(rstan)
+source('functions.R')
+rstan_options(auto_write = TRUE)
+color_scheme_set("red")
+```
+
+## 1. Defining a toy system
+Here we study a Lotka-Volterra system 
+
+$$
+\frac{d\boldsymbol{x}(t)}{dt} = f \left( \boldsymbol{x}(t), \boldsymbol{\theta}\right)
+$$
+where
+$$
+f \left( \boldsymbol{x}, \boldsymbol{\theta} \right) = 
+\begin{bmatrix}
+ x_1 - \theta_1 x_1 x_2 \\
+\theta_1 x_1 x_2- \theta_2 x_2
+\end{bmatrix}
+$$
+with $x_1(0) = 1$ and $x_2(0) = 2$. We create a Stan model and expose its functions to R.
+```{r model, cache=TRUE, message=FALSE}
+t0    <- 0
+y0    <- c(1,2)
+model <- stan_model('stan/main.stan')
+```
+```{r expose, message=FALSE}
+funs <- expose_stan_functions(model)
+print(funs)
+```
+The `odefun` function implements $f$. Functions `rk45_boost`, `euler`, `rk4`, `euler_fixed` and `rk4_fixed`  are ODE integration methods that call `odefun` several times.
+
+## 2. ODE solvers
+The ODE solvers can now be used as follows
+```{r solvers, fig.width=7.2, fig.height=4}
+t_out  <- seq(0.1,12,by=0.1)
+theta  <- c(1,1)     # parameter values
+
+y_out1 <- odeint(rk45_boost, y0, t0, t_out, theta)
+y_out2 <- odeint(euler_fixed, y0, t0, t_out, theta, step_size = 0.2)
+y_out3 <- odeint(rk4_fixed, y0, t0, t_out, theta, step_size = 0.2)
+Y_out  <- list(y_out1, y_out2, y_out3)
+plot_traj(t_out, Y_out, c(" RK45", "Euler (h=0.2)", " RK4 (h=0.2)")) + scale_color_manual(values=c('gray35', 'firebrick2', 'steelblue3'))
+```
+
+The output of RK45 and RK4 are indistinguishable in this case. Euler's method would need a much smaller step size (`h`) to get even close in terms of global error.
+
+## sessionInfo
+```{r end, fig.width=7.2, fig.height=3.5}
+print(sessionInfo())
+```

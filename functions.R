@@ -25,28 +25,42 @@ compute_i_left <- function(t_data, step_size, t0){
 }
 
 # Format data for Stan
-create_stan_data <- function(y0, t_data, Y_data, P, solver, step_size){
+create_stan_data <- function(y0, t_data, Y_data, P, solver, step_size=NULL){
   N <- dim(Y_data)[1]
   D <- dim(Y_data)[2]
-  methods <- c("rk45_boost", "euler", "rk4")
+  methods <- c("rk45_boost", "euler", "euler_fixed",
+               "rk4", "rk4_fixed")
   method <- which(methods==solver)-1
   t0 <- 0
-  if(method==0){
+  if(method %in% c(0,1,3)){
+    if(!is.null(step_size)){
+      stop(paste0("do not specify step size when solver=", solver))
+    }
     step_size <- 1 # won't have any effect
   }
   n_steps <- compute_n_steps(t_data, step_size, t0)
   i_left <- compute_i_left(t_data, step_size, t0) 
+  n_steps_per_timepoint <- 1
   out <- list(N=N, D=D, P=P, y0=y0, t0=t0, t=t_data, y=Y_data, method=method,
-              step_size=step_size, n_steps=n_steps, i_left=i_left)
+              step_size=step_size, n_steps=n_steps, i_left=i_left,
+              n_steps_per_timepoint = n_steps_per_timepoint)
   return(out)
 }
 
 # Convenience wrapper for a function obtained by expose_stan_functions
-odeint <- function(solver, y0, t0, t, theta, step_size=NULL){
+odeint <- function(solver, y0, t0, t, theta, step_size=NULL,
+                   n_steps_per_timepoint=NULL){
   x_r <- x_i <- rep(0, 0)
   if(is.null(step_size)){
-    Y <- solver(y0, t0, t, theta, x_r, x_i)
+    if(is.null(n_steps_per_timepoint)){
+      # rk45
+      Y <- solver(y0, t0, t, theta, x_r, x_i) 
+    }else{
+      # euler or rk4
+      Y <- solver(y0, t0, t, theta, x_r, x_i, n_steps_per_timepoint)
+    }
   }else{
+    # euler_fixed or rk4_fixed
     n_steps <- compute_n_steps(t, step_size, t0)
     i_left <- compute_i_left(t, step_size, t0)
     Y <- solver(y0, t0, t, theta, x_r, x_i, step_size, n_steps, i_left)
