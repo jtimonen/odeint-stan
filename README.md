@@ -1,4 +1,3 @@
-# odeint-stan
-ODE problems and custom solvers in Stan.
+# ODE problems and custom solvers in Stan.
 
-See [this example](https://jtimonen.github.io/odeint-stan/lv.html)
+See [this example case study](https://jtimonen.github.io/odeint-stan/lv.html).
