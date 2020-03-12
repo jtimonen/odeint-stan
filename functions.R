@@ -32,13 +32,12 @@ create_stan_data <- function(y0, t_data, Y_data, P, solver, step_size){
   method <- which(methods==solver)-1
   t0 <- 0
   if(method==0){
-    n_steps <- i_left <- 0
-  }else{
-    n_steps <- compute_n_steps(t_data, step_size, t0)
-    i_left <- compute_i_left(t_data, step_size, t0) 
+    step_size <- 1 # won't have any effect
   }
+  n_steps <- compute_n_steps(t_data, step_size, t0)
+  i_left <- compute_i_left(t_data, step_size, t0) 
   out <- list(N=N, D=D, P=P, y0=y0, t0=t0, t=t_data, y=Y_data, method=method,
-              h=step_size, n_steps=n_steps, i_left=i_left)
+              step_size=step_size, n_steps=n_steps, i_left=i_left)
   return(out)
 }
 
@@ -66,12 +65,12 @@ subsample_theta <- function(fit, n_samples){
 }
 
 # Obtains solutions on a smoother time grid
-solutions <- function(data, odeint_method, THETA, t){
+solutions <- function(data, odeint_method, THETA, t, step_size=NULL){
   K  <- dim(THETA)[1]
   Y_hat <- array(0, c(K, length(t), length(data$y0)))
   for(k in 1:K){
     theta <- THETA[k, ]
-    y_hat <- odeint(odeint_method, data$y0, 0, t, theta)
+    y_hat <- odeint(odeint_method, data$y0, 0, t, theta, step_size)
     Y_hat[k,,] <- y_hat
   }
   return(Y_hat)
@@ -113,7 +112,7 @@ plot_solutions <- function(t_data, Y_data, t_hat, Y_hat, alpha){
     }
     points(t_data, Y_data[,j], pch=16, col='black')
   }
-  mtext("Posterior solutions using RK45", outer = TRUE, cex = 1.5)
+  mtext("Posterior solutions", outer = TRUE, cex = 1.5)
 }
 
 # Visualize solutions
@@ -130,11 +129,11 @@ plot_traj <- function(t_hat, Y_hat, names){
   }
   t <- rep(t_hat, K*D)
   Method <- as.factor(rep(names, each=N*D))
-  vars <- paste('Var', 1:D)
+  vars <- paste0('x', 1:D)
   Variable <- as.factor(rep(rep(vars, each=N),K))
   df <- data.frame(Method, Variable, t, x)
   plt <- ggplot(df, aes(x=t,y=x,group=Method, color=Method, lty=Method))
-  plt <- plt + geom_line() + facet_wrap(.~ Variable)
+  plt <- plt + geom_line(lwd=1) + facet_wrap(.~ Variable)
   plt <- plt + theme(legend.position = 'bottom')
   plt <- plt + ggtitle('ODE solutions with theta = [1,1]')
   return(plt)
