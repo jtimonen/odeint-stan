@@ -58,7 +58,8 @@ Here we fit a model where ODEs are solved using the `integrate_ode_rk45` which i
 stan_seed <- 243
 iter <- 2000
 chains <- 6
-data <- create_stan_data(y0, t_data, Y_data, P, "rk45_boost")
+data <- create_stan_data(y0, t_data, Y_data, P, "rk45_boost",
+                         abs_tol=1e-10, rel_tol=1e-10)
 fit  <- sampling(model, data, seed = stan_seed, refresh=0, iter=iter, chains=chains)
 print(fit)
 ```
