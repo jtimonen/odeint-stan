@@ -68,7 +68,6 @@ We visualize the chains
 plot_chains(fit, ncol=2)
 ```
 
-We see that one chain was slower than others and spent much of the time doing ode solves with parameters that give a very low log posterior probability (`lp__`).
 ```{r time1}
 print(get_elapsed_time(fit))
 ```
