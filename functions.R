@@ -25,7 +25,9 @@ compute_i_left <- function(t_data, step_size, t0){
 }
 
 # Format data for Stan
-create_stan_data <- function(y0, t_data, Y_data, P, solver, step_size=NULL){
+create_stan_data <- function(y0, t_data, Y_data, P, solver, step_size=NULL,
+                             rel_tol=NULL, abs_tol=NULL, max_steps=NULL,
+                             n_steps_per_timepoint=NULL){
   N <- dim(Y_data)[1]
   D <- dim(Y_data)[2]
   methods <- c("rk45_boost", "euler", "euler_fixed",
@@ -39,22 +41,30 @@ create_stan_data <- function(y0, t_data, Y_data, P, solver, step_size=NULL){
     step_size <- 1 # won't have any effect
   }
   n_steps <- compute_n_steps(t_data, step_size, t0)
-  i_left <- compute_i_left(t_data, step_size, t0) 
-  n_steps_per_timepoint <- 1
+  i_left <- compute_i_left(t_data, step_size, t0)
+  if(is.null(rel_tol)){rel_tol <- 1e-6}
+  if(is.null(abs_tol)){abs_tol <- 1e-6}
+  if(is.null(max_steps)){max_steps <- 1e6}
+  if(is.null(n_steps_per_timepoint)){n_steps_per_timepoint <- 1}
   out <- list(N=N, D=D, P=P, y0=y0, t0=t0, t=t_data, y=Y_data, method=method,
               step_size=step_size, n_steps=n_steps, i_left=i_left,
-              n_steps_per_timepoint = n_steps_per_timepoint)
+              n_steps_per_timepoint = n_steps_per_timepoint,
+              rel_tol=rel_tol, abs_tol=abs_tol, max_steps=max_steps)
   return(out)
 }
 
 # Convenience wrapper for a function obtained by expose_stan_functions
 odeint <- function(solver, y0, t0, t, theta, step_size=NULL,
-                   n_steps_per_timepoint=NULL){
+                   n_steps_per_timepoint=NULL, rel_tol=NULL, 
+                   abs_tol=NULL, max_steps=NULL){
   x_r <- x_i <- rep(0, 0)
   if(is.null(step_size)){
     if(is.null(n_steps_per_timepoint)){
       # rk45
-      Y <- solver(y0, t0, t, theta, x_r, x_i) 
+      if(is.null(rel_tol)){rel_tol <- 1e-6}
+      if(is.null(abs_tol)){abs_tol <- 1e-6}
+      if(is.null(max_steps)){max_steps <- 1e6}
+      Y <- solver(y0, t0, t, theta, x_r, x_i, rel_tol, abs_tol, max_steps) 
     }else{
       # euler or rk4
       Y <- solver(y0, t0, t, theta, x_r, x_i, n_steps_per_timepoint)
@@ -80,13 +90,15 @@ subsample_theta <- function(fit, n_samples){
 
 # Obtains solutions on a smoother time grid
 solutions <- function(data, odeint_method, THETA, t, 
-                      step_size=NULL, n_steps_per_timepoint=NULL){
+                      step_size=NULL, n_steps_per_timepoint=NULL,
+                      rel_tol=NULL, abs_tol=NULL, max_steps=NULL){
   K  <- dim(THETA)[1]
   Y_hat <- array(0, c(K, length(t), length(data$y0)))
   for(k in 1:K){
     theta <- THETA[k, ]
     y_hat <- odeint(odeint_method, data$y0, 0, t, theta, 
-                    step_size, n_steps_per_timepoint)
+                    step_size, n_steps_per_timepoint,
+                    rel_tol, abs_tol, max_steps)
     Y_hat[k,,] <- y_hat
   }
   return(Y_hat)

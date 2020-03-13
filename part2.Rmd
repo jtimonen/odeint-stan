@@ -30,7 +30,7 @@ expose_stan_functions(model)
 ```
 
 ## 1. Simulating data
-We generate data using the system defined in [Part 1]('https://github.com/jtimonen/odeint-stan/part1.html'). Noisy observations of **x** are denoted by **y**.
+We generate data using the system defined in [Part 1]('https://jtimonen.github.io/odeint-stan/part1.html'). Noisy observations of **x** are denoted by **y**.
 ```{r sim, fig.width=7.2, fig.height=3.5}
 # Simulation setup
 set.seed(27342)
@@ -90,13 +90,14 @@ Now we fit a model where ODEs are solved using our `rk4` solver with 4 steps per
 
 ### 3.1 Fitting the model
 ```{r fit2, fig.width=12, fig.height=6, cache=TRUE}
-data <- create_stan_data(y0, t_data, Y_data, P, "rk4")
-data$n_steps_per_timepoint <- 4
-fit  <- sampling(model, data, seed = stan_seed, refresh=0, iter=iter, chains=chains)
+data <- create_stan_data(y0, t_data, Y_data, P, "rk4",
+                         n_steps_per_timepoint = 4)
+fit  <- sampling(model, data, seed = stan_seed, refresh=0, iter=iter, 
+                 chains=chains)
 print(fit)
 ```
 
-We visualize the 4 chains
+We visualize the chains
 ```{r diag2, fig.width=7.2, fig.height=5}
 plot_chains(fit, ncol=2)
 ```

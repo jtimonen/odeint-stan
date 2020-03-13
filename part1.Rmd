@@ -1,7 +1,7 @@
 ---
 title: "Custom ODE solvers in Stan - Part 1"
 author: "Juho Timonen"
-date: "3/12/2020"
+date: "3/13/2020"
 output: 
   html_vignette:
     toc: true
@@ -52,17 +52,23 @@ We first demonstrate how to use the RK45 method exposed to R:
 t_out  <- seq(0.5,12,by=0.5)
 theta  <- c(1,1)     # parameter values
 y_out1 <- odeint(rk45_boost, y0, t0, t_out, theta)
-Y_out  <- list(y_out1)
-plot_traj(t_out, Y_out, c("RK45")) + scale_color_manual(values=c('gray35')) + geom_point()
+y_out1b <- odeint(rk45_boost, y0, t0, t_out, theta, abs_tol = 0.01, rel_tol = 0.01)
+y_out1c <- odeint(rk45_boost, y0, t0, t_out, theta, abs_tol = 0.1, rel_tol = 0.1)
+Y_out  <- list(y_out1, y_out1b, y_out1c)
+names <- c("RK45 (tol=1e-6)", "RK45 (tol=1e-2)", "RK45 (tol=1e-1)")
+plot_traj(t_out, Y_out, names) + geom_point()
 ```
+These are the solutions with different absolute and relative tolerances for the RK45 method.
 
 ## 3. ODE solvers with fixed time step
 The `_fixed` versions use a fixed time step and then linear interpolation to get the output at desired, possibly unequally spaced, time points.
 ```{r solver2, fig.width=7.2, fig.height=4}
+names <- c(" RK45", "Euler (h=0.2)", "RK4 (h=0.2)")
+colors <- c('gray35', 'steelblue3', 'firebrick2')
 y_out2 <- odeint(euler_fixed, y0, t0, t_out, theta, step_size = 0.2)
 y_out3 <- odeint(rk4_fixed, y0, t0, t_out, theta, step_size = 0.2)
 Y_out  <- list(y_out1, y_out2, y_out3)
-plot_traj(t_out, Y_out, c(" RK45", "Euler (h=0.2)", " RK4 (h=0.2)")) + scale_color_manual(values=c('gray35', 'firebrick2', 'steelblue3'))
+plot_traj(t_out, Y_out, names) + scale_color_manual(values=colors)
 ```
 
 The output of RK45 and RK4 are indistinguishable in this case. Euler's method would need a much smaller step size (`h`) to get even close in terms of global error.
@@ -74,10 +80,5 @@ These solvers on the other hand determine the step size based on the desired out
 y_out4 <- odeint(euler, y0, t0, t_out, theta, n_steps_per_timepoint=2)
 y_out5 <- odeint(rk4, y0, t0, t_out, theta, n_steps_per_timepoint=2)
 Y_out  <- list(y_out1, y_out4, y_out5)
-plot_traj(t_out, Y_out, c(" RK45", "Euler", " RK4")) + scale_color_manual(values=c('gray35', 'firebrick2', 'steelblue3'))
-```
-
-## sessionInfo
-```{r end, fig.width=7.2, fig.height=3.5}
-print(sessionInfo())
+plot_traj(t_out, Y_out, names) + scale_color_manual(values=colors)
 ```

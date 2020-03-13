@@ -29,11 +29,11 @@ functions{
   }
   
   // Boost implementation of RK45 already in Stan
-  real[,] rk45_boost(real[] y0, real t0, real[] t, real[] theta, real[] x_r, int[] x_i){
+  real[,] rk45_boost(real[] y0, real t0, real[] t, real[] theta, real[] x_r, int[] x_i, real rel_tol, real abs_tol, int max_steps){
     int D = num_elements(y0);
     int N = num_elements(t);
     real y_hat[N, D];
-    y_hat = integrate_ode_rk45(odefun, y0, t0, t, theta, x_r, x_i);
+    y_hat = integrate_ode_rk45(odefun, y0, t0, t, theta, x_r, x_i, rel_tol, abs_tol, max_steps);
     return y_hat; 
   }
 
@@ -144,6 +144,9 @@ data{
   int<lower=1> n_steps;
   int<lower=0> i_left[N];
   int<lower=1> n_steps_per_timepoint;
+  real<lower=0> rel_tol;
+  real<lower=0> abs_tol;
+  int<lower=0> max_steps;
 }
 
 transformed data{
@@ -159,7 +162,7 @@ parameters{
 model{
   real y_hat[N, D];
   if(method==0){
-    y_hat = rk45_boost(y0, t0, t, theta, x_r, x_i);
+    y_hat = rk45_boost(y0, t0, t, theta, x_r, x_i, rel_tol, abs_tol, max_steps);
   }else if(method==1){
     y_hat = euler(y0, t0, t, theta, x_r, x_i, n_steps_per_timepoint);
   }else if(method==2){
