@@ -79,12 +79,14 @@ subsample_theta <- function(fit, n_samples){
 }
 
 # Obtains solutions on a smoother time grid
-solutions <- function(data, odeint_method, THETA, t, step_size=NULL){
+solutions <- function(data, odeint_method, THETA, t, 
+                      step_size=NULL, n_steps_per_timepoint=NULL){
   K  <- dim(THETA)[1]
   Y_hat <- array(0, c(K, length(t), length(data$y0)))
   for(k in 1:K){
     theta <- THETA[k, ]
-    y_hat <- odeint(odeint_method, data$y0, 0, t, theta, step_size)
+    y_hat <- odeint(odeint_method, data$y0, 0, t, theta, 
+                    step_size, n_steps_per_timepoint)
     Y_hat[k,,] <- y_hat
   }
   return(Y_hat)

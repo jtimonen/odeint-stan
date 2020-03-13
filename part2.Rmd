@@ -20,11 +20,22 @@ rstan_options(auto_write = TRUE)
 color_scheme_set("red")
 ```
 
+```{r model, message=FALSE, cache=TRUE}
+model <- stan_model('stan/main.stan')
+expose_stan_functions(model)
+```
+
+```{r expose, results=FALSE, warning=FALSE, message=FALSE}
+expose_stan_functions(model)
+```
+
 ## 1. Simulating data
-We generate data using the system defined in *Part 1*. Noisy observations of **x** are denoted by **y**.
+We generate data using the system defined in [Part 1]('https://github.com/jtimonen/odeint-stan/part1.html'). Noisy observations of **x** are denoted by **y**.
 ```{r sim, fig.width=7.2, fig.height=3.5}
 # Simulation setup
-set.seed(123)
+set.seed(27342)
+t0     <- 0
+y0     <- c(1,2)
 t_data <- seq(0.5,12,by=0.5)
 theta  <- c(1,1)     # true parameter values
 sigma  <- 0.2        # noise std
@@ -44,14 +55,15 @@ Here we fit a model where ODEs are solved using the `integrate_ode_rk45` which i
 
 ### 2.1 Fitting the model
 ```{r fit1, fig.width=12, fig.height=6, cache=TRUE}
-stan_seed <- 321
-iter <- 1000
+stan_seed <- 243
+iter <- 2000
+chains <- 6
 data <- create_stan_data(y0, t_data, Y_data, P, "rk45_boost")
-fit  <- sampling(model, data, seed = stan_seed, refresh=0, iter=iter, chains=3)
+fit  <- sampling(model, data, seed = stan_seed, refresh=0, iter=iter, chains=chains)
 print(fit)
 ```
 
-We visualize the 4 chains
+We visualize the chains
 ```{r diag1, fig.width=7.2, fig.height=5}
 plot_chains(fit, ncol=2)
 ```
@@ -74,13 +86,13 @@ We plotted 100 randomly taken solutions, some of which are from warmup.
 
 ## 3. Custom RK4 method
 
-Now we fit a model where ODEs are solved using our `rk4` solver with step size 0.1.
+Now we fit a model where ODEs are solved using our `rk4` solver with 4 steps per output time point.
 
 ### 3.1 Fitting the model
 ```{r fit2, fig.width=12, fig.height=6, cache=TRUE}
-step_size <- 0.1
-data <- create_stan_data(y0, t_data, Y_data, P, "rk4", step_size)
-fit  <- sampling(model, data, seed = stan_seed, refresh=0, iter=iter, chains=3)
+data <- create_stan_data(y0, t_data, Y_data, P, "rk4")
+data$n_steps_per_timepoint <- 4
+fit  <- sampling(model, data, seed = stan_seed, refresh=0, iter=iter, chains=chains)
 print(fit)
 ```
 
@@ -97,7 +109,7 @@ print(get_elapsed_time(fit))
 We visualize the ODE solutions against data.
 ```{r vis2, fig.width=7.2, fig.height=3.5}
 THETA <- subsample_theta(fit, 100)
-Y_hat <- solutions(data, rk4, THETA, t_hat, step_size)
+Y_hat <- solutions(data, rk4, THETA, t_hat, n_steps_per_timepoint=4)
 plot_solutions(t_data, Y_data, t_hat, Y_hat, alpha=0.3)
 ```
 
