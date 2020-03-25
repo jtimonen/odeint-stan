@@ -26,7 +26,8 @@ compute_i_left <- function(t_data, step_size, t0){
 
 # Format data for Stan
 create_stan_data <- function(y0, t_data, Y_data, P, solver, step_size=NULL,
-                             rel_tol=NULL, abs_tol=NULL, max_steps=NULL,
+                             rel_tol=NULL, abs_tol=NULL, 
+                             ABS_TOL=1e-10, REL_TOL=1e-10, max_steps=NULL,
                              n_steps_per_timepoint=NULL){
   N <- dim(Y_data)[1]
   D <- dim(Y_data)[2]
@@ -49,7 +50,8 @@ create_stan_data <- function(y0, t_data, Y_data, P, solver, step_size=NULL,
   out <- list(N=N, D=D, P=P, y0=y0, t0=t0, t=t_data, y=Y_data, method=method,
               step_size=step_size, n_steps=n_steps, i_left=i_left,
               n_steps_per_timepoint = n_steps_per_timepoint,
-              rel_tol=rel_tol, abs_tol=abs_tol, max_steps=max_steps)
+              rel_tol=rel_tol, abs_tol=abs_tol, max_steps=max_steps,
+              ABS_TOL=ABS_TOL, REL_TOL=REL_TOL)
   return(out)
 }
 

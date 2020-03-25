@@ -146,6 +146,8 @@ data{
   int<lower=1> n_steps_per_timepoint;
   real<lower=0> rel_tol;
   real<lower=0> abs_tol;
+  real<lower=0> REL_TOL;
+  real<lower=0> ABS_TOL;
   int<lower=0> max_steps;
 }
 
@@ -178,6 +180,18 @@ model{
   for(d in 1:D){
     target += normal_lpdf(y[:,d] | y_hat[:,d], sigma);
   }
-  theta ~ normal(0, 5);
-  sigma ~ normal(0, 5);
+  target += normal_lpdf(theta | 0, 5);
+  target += normal_lpdf(sigma | 0, 5);
+}
+
+generated quantities{
+  real LP = 0.0;
+  {
+    real y_hat[N, D] = rk45_boost(y0, t0, t, theta, x_r, x_i, REL_TOL, ABS_TOL, max_steps);
+    for(d in 1:D){
+      LP += normal_lpdf(y[:,d] | y_hat[:,d], sigma);
+    }
+    LP += normal_lpdf(theta | 0, 5);
+    LP += normal_lpdf(sigma | 0, 5);
+  }
 }
