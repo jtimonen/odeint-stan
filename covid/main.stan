@@ -136,7 +136,25 @@ transformed parameters {
 }
 
 model {
-  real log_lh;
+  real log_lh = 0.0;
+  real y[S,K*6];         // raw ODE output
+  vector[K] comp_S[S];
+  vector[K] comp_E[S];
+  vector[K] comp_I[S];
+  vector[K] comp_A[S];
+  vector[K] comp_R[S];
+  vector[K] comp_C[S];
+  vector[K] comp_diffC[S];
+  vector[K] comp_diffM[S];
+  vector[K] comp_M[S];
+  real init[K*6]; // initial values
+  
+  // outcomes
+  vector[D] output_incidence_cases;  // overall case incidence by day
+  vector[D] output_incidence_deaths; // overal mortality incidence by day 
+  vector[K] output_agedistr_cases;  // final age distribution of cases
+  vector[K] output_agedistr_deaths; // final age distribution of deaths
+  
 #include inference_midpoint.stan
   
   // priors
@@ -155,18 +173,45 @@ model {
 }
 
 generated quantities{
-  real logp_1;
-  real logp_2;
+  real logp_1 = 0.0;
+  real logp_2 = 0.0;
+  real log_lh = 0.0;
+  real prior = 0.0;
+  prior += exponential_lpdf(beta | p_beta);
+  prior += exponential_lpdf(nu | p_nu);
+  prior += exponential_lpdf(phi | p_phi);
+  prior += beta_lpdf(eta | p_eta[1], p_eta[2]);
+  prior += beta_lpdf(pi | p_pi[1], p_pi[2]);
+  prior += beta_lpdf(xi_raw | p_xi, p_xi);
+  for(k in 1:K) { prior += beta_lpdf(epsilon[k] | p_epsilon[1], p_epsilon[2]); }
+  for(k in 1:(K-1)){ prior += beta_lpdf(rho[k] | p_rho[1], p_rho[2]); }
+  
   {
-    real log_lh = 0.0;
+    real y[S,K*6];         // raw ODE output
+    vector[K] comp_S[S];
+    vector[K] comp_E[S];
+    vector[K] comp_I[S];
+    vector[K] comp_A[S];
+    vector[K] comp_R[S];
+    vector[K] comp_C[S];
+    vector[K] comp_diffC[S];
+    vector[K] comp_diffM[S];
+    vector[K] comp_M[S];
+    real init[K*6]; // initial values
+  
+    // outcomes
+    vector[D] output_incidence_cases;  // overall case incidence by day
+    vector[D] output_incidence_deaths; // overal mortality incidence by day 
+    vector[K] output_agedistr_cases;  // final age distribution of cases
+    vector[K] output_agedistr_deaths; // final age distribution of deaths
+
 #include inference_bdf.stan
 #include log_lh.stan
-    logp_1 = log_lh;
-  }
-  {
-    real log_lh = 0.0;
+    logp_1 += log_lh;
+  
+    log_lh = 0.0;
 #include inference_midpoint.stan
 #include log_lh.stan
-    logp_2 = log_lh;
+    logp_2 += log_lh;
   }
 }

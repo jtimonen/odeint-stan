@@ -1,35 +1,16 @@
-  real y[S,K*6];         // raw ODE output
-  vector[K] comp_S[S];
-  vector[K] comp_E[S];
-  vector[K] comp_I[S];
-  vector[K] comp_A[S];
-  vector[K] comp_R[S];
-  vector[K] comp_C[S];
-  vector[K] comp_diffC[S];
-  vector[K] comp_diffM[S];
-  vector[K] comp_M[S];
-  
-  // outcomes
-  vector[D] output_incidence_cases;  // overall case incidence by day
-  vector[D] output_incidence_deaths; // overal mortality incidence by day 
-  vector[K] output_agedistr_cases;  // final age distribution of cases
-  vector[K] output_agedistr_deaths; // final age distribution of deaths
-  
-  {
-    real init[K*6]; // initial values
-    for(k in 1:K){
+
+  for(k in 1:K){
       init[k] = age_dist[k] * (1-pi);
       init[K+k] = age_dist[k] * pi;
       init[2*K+k] = 0.0;
       init[3*K+k] = 0.0;
       init[4*K+k] = 0.0;
       init[5*K+k] = 0.0;
-    }
-    
-    // run ODE solver
-    // y = integrate_ode_bdf(SEIR, init, t0, ts, theta, x_r, x_i, 1.0E-6, 1.0E-6, 1.0E3);
-    y = explicit_midpoint_integrator(init, t0, ts, theta, 5e-1, x_r, x_i);
   }
+    
+  // run ODE solver
+  // y = integrate_ode_bdf(SEIR, init, t0, ts, theta, x_r, x_i, 1.0E-6, 1.0E-6, 1.0E3);
+  y = explicit_midpoint_integrator(init, t0, ts, theta, 5e-1, x_r, x_i);
   
   // extract and format ODE results
   for(i in 1:S) {
