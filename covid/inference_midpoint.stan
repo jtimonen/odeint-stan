@@ -12,8 +12,8 @@
   // outcomes
   vector[D] output_incidence_cases;  // overall case incidence by day
   vector[D] output_incidence_deaths; // overal mortality incidence by day 
-  simplex[K] output_agedistr_cases;  // final age distribution of cases
-  simplex[K] output_agedistr_deaths; // final age distribution of deaths
+  vector[K] output_agedistr_cases;  // final age distribution of cases
+  vector[K] output_agedistr_deaths; // final age distribution of deaths
   
   {
     real init[K*6]; // initial values
@@ -27,7 +27,7 @@
     }
     
     // run ODE solver
-    #y = integrate_ode_bdf(SEIR, init, t0, ts, theta, x_r, x_i, 1.0E-6, 1.0E-6, 1.0E3);
+    // y = integrate_ode_bdf(SEIR, init, t0, ts, theta, x_r, x_i, 1.0E-6, 1.0E-6, 1.0E3);
     y = explicit_midpoint_integrator(init, t0, ts, theta, 5e-1, x_r, x_i);
   }
   
@@ -44,7 +44,7 @@
   
   // compute mortality
   for(i in 1:S) {
-    comp_diffM[i] = rep_vector(1.0E-9,K);
+    comp_diffM[i] = rep_vector(EPS, K);
     comp_M[i] = rep_vector(0.0,K);
     for(g in 1:G) {
       if (i>g) comp_diffM[i] += comp_diffC[i-g] .* epsilon * p_gamma[g] ;

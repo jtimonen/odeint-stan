@@ -1,4 +1,3 @@
-
 functions {
 
   real switch_zero(real t, real t1) {
@@ -14,7 +13,7 @@ functions {
     int K = x_i[1];
     real tmax2 = x_r[1];
     real tswitch = x_r[2];
-    real dydt[(6*K)];                //SEIAR, then C 
+    real dydt[(6*K)];                // SEIAR, then C 
     real nI = sum(y[(2*K+1):(3*K)]); // total infectious
     real ntot = sum(y[1:(4*K)]);
     
@@ -128,13 +127,12 @@ parameters{
 
 transformed parameters {
   vector[K] rho_K;
-  real theta[5];         // ODE parameters
-  real xi = xi_raw+0.5;
+  real xi = xi_raw + 0.5;
+  real theta[5] = {beta, eta, xi, nu, 0.0};
   for(i in 1:(K-1)){ 
     rho_K[i] = rho[i];
   }
   rho_K[K] = 1.0;
-  theta[1:5] = {beta, eta, xi, nu, 0.0};
 }
 
 model {
@@ -162,11 +160,13 @@ generated quantities{
   {
     real log_lh = 0.0;
 #include inference_bdf.stan
+#include log_lh.stan
     logp_1 = log_lh;
   }
   {
     real log_lh = 0.0;
 #include inference_midpoint.stan
+#include log_lh.stan
     logp_2 = log_lh;
   }
 }

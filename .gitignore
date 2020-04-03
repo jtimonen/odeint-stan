@@ -5,3 +5,7 @@
 *files/
 /*.html
 *.rds
+covid/data
+covid/main.R
+covid/setup.R
+
