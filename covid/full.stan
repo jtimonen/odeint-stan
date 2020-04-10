@@ -256,6 +256,8 @@ model {
   }
   lik += multinomial_lpmf(agedistr_cases | output_agedistr_cases);
   lik += multinomial_lpmf(agedistr_deaths | output_agedistr_deaths);
+  
+  //target += lik
 }
 
 generated quantities{
