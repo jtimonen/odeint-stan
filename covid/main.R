@@ -7,25 +7,29 @@ model <- stan_model('full.stan')
 
 fit <- sampling(object      = model,
                 data        = dat, 
-                iter        = 100,
+                iter        = 1000,
                 control     = list(adapt_delta = 0.8, max_treedepth = 10),
-                chains      = 2,
+                chains      = 3,
                 save_warmup = TRUE)
 #                init        = 0.5
 
 PM <- FALSE
-IW <- TRUE
+IW <- FALSE
 
 prior <- as.vector(rstan::extract(fit, pars='prior', permuted = PM, inc_warmup = IW))
+priorG <- as.vector(rstan::extract(fit, pars='prior_GEN_', permuted = PM, inc_warmup = IW))
 lp__ <- as.vector(rstan::extract(fit, pars='lp__', permuted = PM, inc_warmup = IW))
-lik1 <- as.vector(rstan::extract(fit, pars='lik_GEN_', permuted = PM, inc_warmup = IW))
+lik <- as.vector(rstan::extract(fit, pars='lik', permuted = PM, inc_warmup = IW))
+likG <- as.vector(rstan::extract(fit, pars='lik_GEN_', permuted = PM, inc_warmup = IW))
 
+lp_GEN_ <- priorG + likG
 #lik2 <- as.vector(rstan::extract(fit, pars='lik_2', permuted = PM, inc_warmup = IW))
 #plot(lp__, prior + lik1)
 #plot(lp__, prior + lik2)
 
-post1 <- prior + lik1
-plot(lp__, prior)
+plot(lp__, lp_GEN_)
+
+out <- psis(as.vector(lp__ - lp_GEN_))
 
 # Get compartments
 S <- rstan::extract(fit, pars='comp_S')$comp_S
@@ -56,7 +60,7 @@ plot_compartment <- function(fit, name='S', j=1, alpha = 0.2, color = 'steelblue
   return(p)
 }
 
-plot_compartment(fit, 'I', 3)
+plot_compartment(fit, 'E', 3)
 
 
 

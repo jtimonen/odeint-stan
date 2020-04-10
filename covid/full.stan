@@ -145,6 +145,9 @@ parameters{
   real<lower=0> nu;                    // shift of quarantine implementation
 }
 transformed parameters {
+  real prior = 0.0;
+  real lik = 0.0;
+  
   // transformed parameters
   vector[K] rho_K;
   real xi = xi_raw+0.5;
@@ -230,13 +233,8 @@ transformed parameters {
   }
   output_agedistr_cases = (comp_C[tmax,].*rho_K) ./ sum(comp_C[tmax,].*rho_K);
   output_agedistr_deaths = (comp_M[tmax,]) ./ sum(comp_M[tmax,]);
-}
-
-model {
   
-  // priors
-  real lik = 0.0;
-  real prior = 0.0;
+  // PRIOR
   {
     prior += exponential_lpdf(beta | p_beta);
     prior += beta_lpdf(eta | p_eta[1], p_eta[2]);
@@ -247,7 +245,6 @@ model {
     prior += beta_lpdf(xi_raw | p_xi, p_xi); 
     prior += exponential_lpdf(nu | p_nu);
   }
-  target += prior;
   
   // likelihood
   for(i in 1:D) {
@@ -256,12 +253,15 @@ model {
   }
   lik += multinomial_lpmf(agedistr_cases | output_agedistr_cases);
   lik += multinomial_lpmf(agedistr_deaths | output_agedistr_deaths);
-  
-  //target += lik
+}
+
+model {
+  target += prior;
+  target += lik;
 }
 
 generated quantities{
-  real prior = 0.0;
+  real prior_GEN_ = 0.0;
   real lik_GEN_ = 0.0;
   
   vector[K] comp_S_GEN_[S];
@@ -281,21 +281,21 @@ generated quantities{
   
   // PRIOR
   {
-    prior += exponential_lpdf(beta | p_beta);
-    prior += beta_lpdf(eta | p_eta[1], p_eta[2]);
-    for(k in 1:K) { prior += beta_lpdf(epsilon[k] | p_epsilon[1], p_epsilon[2]); }
-    for(k in 1:(K-1)){ prior += beta_lpdf(rho[k] | p_rho[1], p_rho[2]); }
-    prior += beta_lpdf(pi | p_pi[1], p_pi[2]);
-    prior += exponential_lpdf(phi | p_phi);
-    prior += beta_lpdf(xi_raw | p_xi, p_xi); 
-    prior += exponential_lpdf(nu | p_nu);
+    prior_GEN_ += exponential_lpdf(beta | p_beta);
+    prior_GEN_ += beta_lpdf(eta | p_eta[1], p_eta[2]);
+    for(k in 1:K) { prior_GEN_ += beta_lpdf(epsilon[k] | p_epsilon[1], p_epsilon[2]); }
+    for(k in 1:(K-1)){ prior_GEN_ += beta_lpdf(rho[k] | p_rho[1], p_rho[2]); }
+    prior_GEN_ += beta_lpdf(pi | p_pi[1], p_pi[2]);
+    prior_GEN_ += exponential_lpdf(phi | p_phi);
+    prior_GEN_ += beta_lpdf(xi_raw | p_xi, p_xi); 
+    prior_GEN_ += exponential_lpdf(nu | p_nu);
   }
   
   // LIKELIHOOD USING MIDPOINT INTEGRATOR
   {
     real y_GEN_[S,K*6]; // raw ODE output
-    //y_GEN_ = integrate_ode_bdf(SEIR, init, t0, ts, theta, x_r, x_i, 1.0E-10, 1.0E-10, 1.0E3);
-    y_GEN_ = explicit_midpoint_integrator(init, t0, ts, theta, 5e-1, x_r, x_i);
+    y_GEN_ = integrate_ode_bdf(SEIR, init, t0, ts, theta, x_r, x_i, 1.0E-10, 1.0E-10, 1.0E3);
+    //y_GEN_ = explicit_midpoint_integrator(init, t0, ts, theta, 5e-1, x_r, x_i);
     
     for(i in 1:S) {
       comp_S_GEN_[i] = (to_vector(y_GEN_[i,1:K]) + 1.0E-9) * pop_t;
