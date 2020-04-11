@@ -5,5 +5,4 @@
 *files/
 /*.html
 *.rds
-covid/data
-covid/setup.R
+
