@@ -31,36 +31,7 @@ plot(lp__, lp_GEN_)
 
 out <- psis(as.vector(lp__ - lp_GEN_))
 
-# Get compartments
-S <- rstan::extract(fit, pars='comp_S')$comp_S
-E <- rstan::extract(fit, pars='comp_E')$comp_E
-I <- rstan::extract(fit, pars='comp_I')$comp_I
-A <- rstan::extract(fit, pars='comp_A')$comp_A
-R <- rstan::extract(fit, pars='comp_R')$comp_R
-C <- rstan::extract(fit, pars='comp_C')$comp_C
 
-extract_compartment <- function(fit, name){
-  comp <- paste0('comp_', name)
-  X <- rstan::extract(fit, pars=comp)[[comp]]
-  return(X)
-}
-
-plot_compartment <- function(fit, name='S', j=1, alpha = 0.2, color = 'steelblue4'){
-  X  <- extract_compartment(fit, name)
-  nS <- dim(X)[1]
-  nT <- dim(X)[2]
-  idx <- as.factor(rep(1:nS, each=nT))
-  x <- rep(1:nT, nS)
-  y <- as.numeric(t(X[,,j]))
-  
-  df <- data.frame(idx, x, y)
-  p <- ggplot(df, aes(x=x, y=y, group=idx)) + geom_line(alpha = alpha, color = color)
-  p <- p + ggtitle(paste0('Compartment ', name, ' (age group ', j, ')'))
-  p <- p + xlab('Day') + ylab('Size')
-  return(p)
-}
-
-plot_compartment(fit, 'E', 3)
 
 
 

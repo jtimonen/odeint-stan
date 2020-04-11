@@ -1,9 +1,3 @@
-# Setup
-library(tidyverse)
-library(lubridate)
-library(rstan)
-library(readxl)
-source("data_management_china.R")
 
 ## Compute discrete distribution of time from onset to death ----
 
@@ -29,7 +23,7 @@ gamma = gamma/sum(gamma)
 
 
 ### ADDED BY JT ###
-tmax = 42
+tmax = day_max
 ###################
 
 ## Format for stan
@@ -37,7 +31,7 @@ t0 = 0
 S = as.numeric(day_max-day_start)
 t_data = as.numeric(day_data-day_start)
 ts = t_data:S
-D = tmax-t_data+1
+D = length(ts)
 tswitch = as.numeric(day_quarantine-day_start)
 data_list_model13 = list(
   K=9,
