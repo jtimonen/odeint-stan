@@ -1,71 +1,4 @@
-functions {
-  real switch_eta(real t, real t1, real eta, real nu, real xi) {
-    return(eta+(1-eta)/(1+exp(xi*(t-t1-nu))));
-  }
-  real[] SEIR(real t, real[] y, real[] theta, real[] x_r, int[] x_i) {
-    int K = x_i[1];
-    real tswitch = x_r[1];
-    real dydt[(4*K)];  // SEIAR, then C and D
-    real nI;           // total infectious
-    real ntot;
-    real beta;         // transmission rate
-    real eta;          // reduction in transmission rate after quarantine
-    real xi;           // slope of quarantine implementation
-    real nu;           // shift of quarantine implementation
-    real tau;          // incubation period
-    real mu;           // infectious period
-    real psi;          // probability of symptoms
-    real p_tswitch;
-    real contact[K*K]; // contact matrix, first K values
-                       // corresponds to number of contacts between 
-                       // age class 1 and other classes, etc
-    
-    real n_by_age[K];
-    real f_inf[K];     // force of infection
-    real init[K*4];
-    real age_dist[K];
-    real pi;           // number of cases at t0
-    
-    // estimated parameters
-    beta = theta[1];
-    eta = theta[2];
-    xi = theta[3];
-    nu = theta[4];
-    pi = theta[5];
-    psi = theta[6];
-    
-    // Initial conditions
-    for(k in 1:K){
-      age_dist[k] = x_r[3+K*K + k];
-      init[k] = age_dist[k] * (1-pi);
-      init[K+k] = age_dist[k] * pi;
-      init[2*K+k] = 0.0;
-      init[3*K+k] = 0.0;
-    }
-    
-    // Fixed parameters
-    tau = 1.0/x_r[2];
-    mu = 1.0/x_r[3];
-    contact = x_r[4:(3+K*K)];
-    
-    // Total number of infectious people
-    p_tswitch = switch_eta(t,tswitch,eta,nu,xi);
-    
-    // Force of infection by age classes: 
-    // beta * p_tswitch * sum((#infected) / (#people) * (#contacts))
-    for(k in 1:K){
-      f_inf[k] = beta * p_tswitch * sum(to_vector(y[(2*K+1):(3*K)]) ./ to_vector(age_dist) .* to_vector(contact[(K*(k-1)+1):(k*K)])); //
-    }
-    for (k in 1:K) {
-      dydt[k] = - f_inf[k] * (y[k]+init[k]);                                      // S
-      dydt[K+k] = f_inf[k] * (y[k]+init[k])- tau * (y[K+k]+init[K+k]);            // E
-      dydt[2*K+k] = psi * tau * (y[K+k]+init[K+k]) - mu * (y[2*K+k]+init[2*K+k]); // I
-      dydt[3*K+k] = psi * tau * (y[K+k]+init[K+k]);                               // C
-    }
-    return(dydt);
-  }
-}
-
+#include functions.stan
 data {
   int K;                   // number of age classes
   vector[K] age_dist;
@@ -79,7 +12,7 @@ data {
   int agedistr_cases[K];   // number of cases at tmax for the K age classes
   int agedistr_deaths[K];  // mortality at tmax for the K age classes
   
-  // Parameters in priors
+  // Prior hyperparameters
   real p_beta;
   real p_eta[2];
   real p_pi[2];
@@ -102,16 +35,14 @@ data {
   int S;
   real ts[S];        // time bins
   real contact[K*K];
-  
-  int inference;
-  int doprint;
+
 }
 
 transformed data {
   real EPS = 1.0E-9; // correction to avoid neg. values as tolerance is 1.0E-10
   real x_r[3+K*K+K]; // 4 parameters + K*K contact matrix parameters + K age_dist parameters
   int x_i[1] = {K};
-  real init[K*4] = rep_array(0.0, K * 4); // initial values
+  real init[K*4] = rep_array(0.0, K*4); // initial values
   x_r[1] = tswitch;
   x_r[2] = p_incubation;
   x_r[3] = p_infectious;
@@ -126,7 +57,7 @@ parameters{
   real<lower=0,upper=1> eta;              // reduct. in transm. rate after quarant. measures
   vector<lower=0,upper=1> [K] epsilon;    // age-dependent mortality probability
   vector<lower=0,upper=1> [K-1] raw_rho;  // age-dependent reporting probability
-  real<lower=0, upper=1> pi;              // number of cases at t0
+  real<lower=0, upper=1> pii;             // number of cases at t0
   real<lower=0> phi[2];                   // variance parameters
   real<lower=0,upper=1> xi_raw;           // slope of quarantine implementation
   real<lower=0> nu;                       // shift of quarantine implementation
@@ -136,109 +67,38 @@ parameters{
 transformed parameters {
   
   // these store non-jacobian-adjusted versions of prior and likelihood
-  real log_prior = 0.0;
-  real log_lik = 0.0;
+  real log_prior_na = 0.0;
+  real log_lik_na = 0.0;
   
   // transformed parameters
   vector[K] rho;
   real xi = xi_raw+0.5;
   real theta[6];          // vector of parameters
   real y[S,K*4];          // raw ODE output
-  vector[K] comp_S[S];
-  vector[K] comp_E[S];
-  vector[K] comp_I[S];
-  vector[K] comp_D[S];
-  vector[K] comp_diffD[S];
-  vector[K] comp_C[S+G];
-  vector[K] comp_diffC[S+G];
-  vector[K] comp_diffM[S+G];
-  vector[K] comp_M[S+G];
-  // outcomes
-  vector[D] output_incidence_cases;  // overall case incidence by day
-  vector[D] output_incidence_deaths; // overal mortality incidence by day 
-  simplex[K] output_agedistr_cases;  // final age distribution of cases
-  simplex[K] output_agedistr_deaths; // final age distribution of deaths
   
   // transformed paremeters
-  for(i in 1:(K-1)){ rho[i]=raw_rho[i];}
+  for(i in 1:(K-1)){
+    rho[i] = raw_rho[i];
+  }
   rho[K] = 1.0;
-  theta[1:6] = {beta,eta,xi,nu,pi,psi};
+  theta[1:6] = {beta, eta, xi, nu, pii, psi};
   
   // run ODE solver
   y = integrate_ode_bdf(SEIR, init, t0, ts, theta, x_r, x_i, 1.0E-10, 1.0E-10, 1.0E3);
   
-  // extract and format ODE results 
-  for(i in 1:S) {
-    comp_S[i] = (to_vector(y[i,1:K]) + to_vector(age_dist) * (1-pi) + EPS) * pop_t;
-    comp_E[i] = (to_vector(y[i,(K+1):(2*K)]) + to_vector(age_dist) * pi + EPS) * pop_t;
-    comp_I[i] = (to_vector(y[i,(2*K+1):(3*K)]) + EPS) * pop_t;
-    comp_C[i] = (to_vector(y[i,(3*K+1):(4*K)]) + EPS) * pop_t;
-    comp_diffC[i] = i==1 ? comp_C[i,] : EPS*pop_t + comp_C[i,] - comp_C[i-1,]; 
-    // comp_diffC = lagged difference of cumulative incidence of symptomatics
-  }
+  // Prior
+  log_prior_na += log_prior_noadjustment(beta, eta, epsilon, raw_rho, xi_raw, pii, psi, phi, nu,
+      p_beta, p_eta, p_epsilon, p_rho, p_xi, p_pi, p_psi, p_phi, p_nu);
   
-  // Incidence and cumulative incidence after S
-  for(g in 1:G){
-    comp_C[S+g] = comp_C[S];
-    comp_diffC[S+g] = rep_vector(EPS, K);
-  }
-  
-  // Mortality, set diffM and M to 0
-  for(i in 1:(G+S)){ comp_diffM[i] = rep_vector(EPS, K); }
-  
-  // Compute mortality
-  for(i in 1:S) {
-    for(g in 1:G) {
-      comp_diffM[i+g] += comp_diffC[i] .* epsilon * p_gamma[g] ;
-    }
-  }
-  
-  // Cumulative sum
-  for(i in 1:(S+G)) {
-    for(k in 1:K) {
-      comp_M[i,k] = sum(comp_diffM[1:i,k]);
-    }
-  }
-  
-  // Compute D and diffD
-  for(i in 1:S){
-    comp_D[i] = (1.0-psi)/psi * comp_C[i];
-    comp_diffD[i] = (1.0-psi)/psi * comp_diffC[i];
-  }
-  
-  // Compute outcomes
-  for(i in t_data:S){
-    output_incidence_cases[i-t_data+1] = sum(comp_diffC[i].*rho);
-    output_incidence_deaths[i-t_data+1] = sum(comp_diffM[i]);
-  }
-  output_agedistr_cases = (comp_C[S,].*rho) ./ sum(comp_C[S,].*rho);
-  output_agedistr_deaths = (comp_M[S,]) ./ sum(comp_M[S,]);
-    
-  // PRIOR
-  log_prior += beta_lpdf(beta | p_beta, p_beta);
-  log_prior += beta_lpdf(eta | p_eta[1],p_eta[2]);
-  for(k in 1:K){ log_prior += beta_lpdf(epsilon[k] | p_epsilon[1], p_epsilon[2]); }
-  for(k in 1:(K-1)) { log_prior += beta_lpdf(raw_rho[k] | p_rho[1], p_rho[2]); }
-  log_prior += beta_lpdf(xi_raw | p_xi, p_xi); 
-  log_prior += beta_lpdf(pi | p_pi[1], p_pi[2]);
-  log_prior += beta_lpdf(psi | p_psi[1], p_psi[2]);
-  log_prior += exponential_lpdf(phi | p_phi);
-  log_prior += exponential_lpdf(nu | p_nu);
-  
-  // LIKELIHOOD
-  for(i in 1:D) {
-      log_lik += neg_binomial_2_lpmf( incidence_cases[i] | output_incidence_cases[i], output_incidence_cases[i]/phi[1]);
-      log_lik  += neg_binomial_2_lpmf( incidence_deaths[i] | output_incidence_deaths[i],output_incidence_deaths[i]/phi[2]);
-  }
-  log_lik += multinomial_lpmf(agedistr_cases | output_agedistr_cases);
-  log_lik += multinomial_lpmf(agedistr_deaths | output_agedistr_deaths);
+  // Likelihood
+  log_lik_na += log_likelihood_noadjustment(psi, pii, phi, p_gamma, epsilon, rho, incidence_cases, incidence_deaths, agedistr_cases, agedistr_deaths, age_dist, EPS, pop_t, t_data, y);
   
 }
 
 model {
   
   // evaluate lp__ with the (invisible) jacobian adjustment term included
-  target += log_prior;
-  target += log_lik;
+  target += log_prior_na;
+  target += log_lik_na;
   
 }
