@@ -1,4 +1,11 @@
-#include functions.stan
+functions {
+#include stan_functions/switch.stan
+#include stan_functions/SEIR.stan
+#include stan_functions/extract.stan
+#include stan_functions/likelihood.stan
+#include stan_functions/prior.stan
+}
+
 data {
   int K;                   // number of age classes
   vector[K] age_dist;
