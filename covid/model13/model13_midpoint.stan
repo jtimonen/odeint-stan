@@ -4,10 +4,37 @@ functions {
 #include stan_functions/extract.stan
 #include stan_functions/likelihood.stan
 #include stan_functions/prior.stan
+
+  // Integrate from one time to another with max timestep dt
+  real[] explicit_midpoint_single_output_integrator(real[] init, real t0, real t1, real[] theta, real dt, data real[] x_r, data int[] x_i) {
+    vector[size(init)] ytmp = to_vector(init);
+    vector[size(init)] midpoint;
+    real t = t0;
+    while((t + dt) < t1) {
+      midpoint = ytmp + (dt / 2.0) * to_vector(SEIR(t, to_array_1d(ytmp), theta, x_r, x_i));
+      ytmp = ytmp + dt * to_vector(SEIR(t + dt / 2.0, to_array_1d(midpoint), theta, x_r, x_i));
+      t = t + dt;
+    }
+
+    midpoint = ytmp + ((t1 - t) / 2.0) * to_vector(SEIR(t, to_array_1d(ytmp), theta, x_r, x_i));
+    ytmp = ytmp + (t1 - t) * to_vector(SEIR(t + ((t1 - t) / 2.0), to_array_1d(midpoint), theta, x_r, x_i));
+    return to_array_1d(ytmp);
+  }
+
+  // Replacement for ode_integrate_rk45 (or ode_integrate_bdf)
+  real[,] explicit_midpoint_integrator(real[] init, real t0, real[] ts, real[] theta, real dt, data real[] x_r, data int[] x_i) {
+    real y[size(ts), size(init)];
+    y[1] = explicit_midpoint_single_output_integrator(init, t0, ts[1], theta, dt, x_r, x_i);
+    for(i in 2:size(ts)) {
+      y[i] = explicit_midpoint_single_output_integrator(y[i - 1], ts[i - 1], ts[i], theta, dt, x_r, x_i);
+    }
+    return(y);
+  }
 }
 
 data {
 #include stan_chunks/data.stan
+real<lower=0> step_size;
 }
 
 transformed data {
@@ -34,7 +61,7 @@ transformed parameters {
   theta[1:6] = {beta, eta, xi, nu, pii, psi};
   
   // Solve ODE
-  y = integrate_ode_bdf(SEIR, init, t0, ts, theta, x_r, x_i, abs_tol, rel_tol, max_iter);
+  y = explicit_midpoint_integrator(init, t0, ts, theta, step_size, x_r, x_i);
   
   // Compute prior and likelihood
   log_prior_na += log_prior_noadjustment(beta, eta, epsilon, raw_rho, xi_raw, pii, psi, phi, nu, p_beta, p_eta, p_epsilon, p_rho, p_xi, p_pi, p_psi, p_phi, p_nu);
