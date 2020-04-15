@@ -10,17 +10,17 @@ source("model13/data_stan_model13_china.R") # creates data_list_model13
 source("postproc.R")
 
 # Compile model
-model <- stan_model(file = 'model13/model13_bdf.stan')
-#model <- stan_model(file = 'model13/model13_midpoint.stan')
+#model <- stan_model(file = 'model13/model13_bdf.stan')
+model <- stan_model(file = 'model13/model13_midpoint.stan')
 
 # Additional data for ode_integrate_bdf
 data_list_model13$EPS      <- 1.0E-9
-data_list_model13$abs_tol  <- 1.0E-6
-data_list_model13$rel_tol  <- 1.0E-6
-data_list_model13$max_iter <- 1.0E3
+data_list_model13$abs_tol  <- 1.0E-10
+data_list_model13$rel_tol  <- 1.0E-10
+data_list_model13$max_iter <- 1.0E6
 
 # Additional data for midpoint method
-data_list_model13$step_size <- 2.0
+data_list_model13$step_size <- 1.0
 
 # Run sampling
 fit <- sampling(object  = model,
