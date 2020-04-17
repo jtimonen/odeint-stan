@@ -1,12 +1,12 @@
 # Create additional Stan data related to some ODE solver methods
-add_interpolation_data <- function(data_list, step_size){
-  data_list$step_size <- step_size
+add_interpolation_data <- function(data_list, h){
   t0 <- data_list$t0
   ts <- data_list$ts
-  R  <- compute_R(t0, ts, step_size)
-  A  <- compute_A(t0, ts, step_size, R)
-  data_list$INTERP_R <- R
-  data_list$INTERP_A <- A
+  R  <- compute_R(t0, ts, h)
+  A  <- compute_A(t0, ts, h, R)
+  data_list$STEP_SIZE <- h
+  data_list$INTERP_R  <- R
+  data_list$INTERP_A  <- A
   return(data_list)
 }
 
@@ -16,10 +16,10 @@ compute_R <- function(t0, ts, h){
   R <- rep(0, n)
   for(i in 1:n){
     r <- 0
-    while(t0 + r*h <= ts[i]){
+    while(t0 + r*h < ts[i]){
       r <- r + 1
     }
-    R[i] <- r
+    R[i] <- r - 1
   }
   return(R)
 }
@@ -29,7 +29,8 @@ compute_A <- function(t0, ts, h, R){
   n <- length(ts)
   A <- rep(0, n)
   for(i in 1:n){
-    A[i] <- (t0 + R[i]*h - ts[i])/h
+    D_i <- ts[i] - (t0 + R[i]*h)
+    A[i] <- (h - D_i)/h
   }
   return(A)
 }

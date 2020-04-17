@@ -11,6 +11,7 @@ source("functions.R")
 
 # Compile model
 #model <- stan_model(file = 'model13/model13_bdf.stan')
+#model <- stan_model(file = 'model13/model13_euler.stan')
 model <- stan_model(file = 'model13/model13_emp.stan')
 
 # Additional data for ode_integrate_bdf
@@ -20,7 +21,7 @@ data_list_model13$rel_tol  <- 1.0E-10
 data_list_model13$max_iter <- 1.0E6
 
 # Additional data for midpoint method
-step_size <- 0.5
+step_size <- 0.2
 data_list_model13 <- add_interpolation_data(data_list_model13, step_size)
 
 # Run sampling

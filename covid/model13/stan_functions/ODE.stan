@@ -64,3 +64,20 @@ real[] SEIR(real t, real[] y, real[] theta, real[] x_r, int[] x_i) {
   return(dydt);
 }
 
+// Vector version of SEIR
+vector odefun(real t, vector y, real[] theta, data real[] x_r, data int[] x_i){
+  return to_vector(SEIR(t, to_array_1d(y), theta, x_r, x_i));
+}
+  
+// Linear interpolation from equispaced time grid
+real[,] interpolate(vector[] y, data int[] R, data real[] A){
+  int n = size(R);
+  int d = num_elements(y[1]);
+  real x[n, d];
+  for(i in 1:n){
+    int idx = R[i];
+    x[i] = to_array_1d(A[i] * y[idx] + (1 - A[i]) * y[idx+1]);
+  }
+  return(x);
+}
+  
