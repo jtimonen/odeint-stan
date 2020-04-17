@@ -59,7 +59,7 @@ plot_compartment <- function(fit, name='S', j=1, alpha = 0.2, color = 'steelblue
 }
 
 # Helper function
-get_samples <- function(param){
-  samples <- as.vector(rstan::extract(fit, pars=param)[[param]])
+get_samples <- function(stan_fit, param){
+  samples <- as.vector(rstan::extract(stan_fit, pars=param)[[param]])
   return(samples)
 }

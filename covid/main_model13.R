@@ -15,8 +15,8 @@ source("functions.R")
 #model <- stan_model(file = 'model13/model13_emp.stan')
 #model <- stan_model(file = 'model13/model13_ab2.stan')
 #model <- stan_model(file = 'model13/model13_rk4.stan')
-model <- stan_model(file = 'model13/model13_rk45.stan')
-#model <- stan_model(file = 'model13/model13_bdf.stan')
+#model <- stan_model(file = 'model13/model13_rk45.stan')
+model <- stan_model(file = 'model13/model13_bdf.stan')
 
 # Additional data for reference method ode_integrate_bdf
 data_list_model13$EPS           <- 1.0E-9
@@ -31,18 +31,25 @@ data_list_model13 <- add_interpolation_data(data_list_model13, step_size)
 # Run sampling
 fit <- sampling(object  = model,
                 data    = data_list_model13,
-                iter    = 1000,
-                chains  = 1,
-                cores   = 1,
+                iter    = 10,
+                chains  = 4,
+                cores   = 4,
                 refresh = 10)
 
-# PSIS-loo
-lh1 <- get_samples('log_lik_na')
-lh2 <- get_samples('log_lik_na_REF_')
-pr1 <- get_samples('log_prior_na')
-pr2 <- get_samples('log_prior_na_REF_')
+# Extract log posterior values (not Jacobian adjusted)
+lh1 <- get_samples(fit, 'log_lik_na')
+lh2 <- get_samples(fit, 'log_lik_na_REF_')
+pr1 <- get_samples(fit, 'log_prior_na')
+pr2 <- get_samples(fit, 'log_prior_na_REF_')
 post1 <- lh1 + pr1
 post2 <- lh2 + pr2
 
+# PSIS
 out <- psis(post1 - post2)
-print(out$diagnostics)
+pareto_k <- out$diagnostics$pareto_k
+cat('PARETO_K =', pareto_k, '\n')
+
+# Get runtime
+runtimes <-get_elapsed_time(fit)
+print(runtimes)
+
