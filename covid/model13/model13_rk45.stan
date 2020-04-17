@@ -22,7 +22,7 @@ parameters{
 
 transformed parameters {
 #include stan_chunks/transformed_parameters.stan
-  y = integrate_ode_bdf(SEIR, init, t0, ts, theta, x_r, x_i);
+  y = integrate_ode_rk45(SEIR, init, t0, ts, theta, x_r, x_i);
 #include stan_chunks/likelihood_and_prior.stan
 }
 

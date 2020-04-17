@@ -14,7 +14,9 @@ source("functions.R")
 #model <- stan_model(file = 'model13/model13_euler.stan')
 #model <- stan_model(file = 'model13/model13_emp.stan')
 #model <- stan_model(file = 'model13/model13_ab2.stan')
-model <- stan_model(file = 'model13/model13_rk4.stan')
+#model <- stan_model(file = 'model13/model13_rk4.stan')
+model <- stan_model(file = 'model13/model13_rk45.stan')
+#model <- stan_model(file = 'model13/model13_bdf.stan')
 
 # Additional data for reference method ode_integrate_bdf
 data_list_model13$EPS           <- 1.0E-9
@@ -22,7 +24,7 @@ data_list_model13$abs_tol_REF_  <- 1.0E-10
 data_list_model13$rel_tol_REF_  <- 1.0E-10
 data_list_model13$max_iter_REF_ <- 1.0E6
 
-# Additional data for midpoint method
+# Additional data needed if using a fixed-step solver
 step_size <- 0.7
 data_list_model13 <- add_interpolation_data(data_list_model13, step_size)
 
@@ -30,8 +32,6 @@ data_list_model13 <- add_interpolation_data(data_list_model13, step_size)
 fit <- sampling(object  = model,
                 data    = data_list_model13,
                 iter    = 1000,
-                control = list(adapt_delta=0.8, max_treedepth=10),
-                init    = 0.5,
                 chains  = 1,
                 cores   = 1,
                 refresh = 10)
