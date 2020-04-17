@@ -6,4 +6,4 @@
 #SBATCH --mem=2500
 #SBATCH -o out/ab.out
 module load r/3.6.1-python3
-srun Rscript --vanilla main_triton.R 10 200 2 0.5
+srun Rscript --vanilla main_triton.R 10 200 3 0.5
