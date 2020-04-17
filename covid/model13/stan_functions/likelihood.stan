@@ -6,7 +6,7 @@ real log_likelihood_noadjustment(
     real[] phi, 
     real[] p_gamma, 
     vector epsilon,  
-    vector rho,  
+    vector raw_rho,  
     data int[] icases, 
     data int[] ideaths, 
     data int[] acases, 
@@ -17,6 +17,7 @@ real log_likelihood_noadjustment(
     data int t_data, 
     real[,] y)
 {
+  
   // Declare variables
   real log_lik = 0.0;
   int S = size(y);
@@ -37,6 +38,13 @@ real log_likelihood_noadjustment(
   vector[K] comp_diffM[S+G] = get_comp_diffM(comp_diffC, epsilon, p_gamma, EPS, S, G);
   vector[K] comp_M[S+G] = get_comp_M(comp_diffM, S, G);
 
+  // Append rho of last age class
+  vector[K] rho;
+  for(i in 1:(K-1)){
+    rho[i] = raw_rho[i];
+  }
+  rho[K] = 1.0;
+  
   // Compute outcomes 
   for(i in t_data:S){
     out_icases[i-t_data+1] = sum(comp_diffC[i].*rho);

@@ -1,6 +1,7 @@
 functions {
 #include stan_functions/switch.stan
-#include stan_functions/ODE.stan
+#include stan_functions/SEIR.stan
+#include stan_functions/interpolate.stan
 #include stan_functions/extract.stan
 #include stan_functions/likelihood.stan
 #include stan_functions/prior.stan
@@ -9,23 +10,22 @@ functions {
   real[,] integrate_ode_emp(real[] y0, real t0, real[] ts, real[] theta,
       data real STEP_SIZE, data int[] INTERP_R, data real[] INTERP_A, 
       data real[] x_r, data int[] x_i){
+        
     int d = size(y0);
     int n = size(ts);
     real x[n, d];
     int R_n = INTERP_R[n];
-    real t_tmp = t0;
-    real t_mid;
-    vector[d] y_tmp = to_vector(y0);
+    vector[d] y[R_n+2];
+    real t = t0;
+    
     vector[d] y_mid;
-    vector[d] y[R_n+1];
-    y[1] = y_tmp;
-    for(i in 1:R_n){
-      y_mid = y_tmp + 0.5*STEP_SIZE*odefun(t_tmp, y_tmp, theta, x_r, x_i);
-      t_mid = t_tmp + 0.5*STEP_SIZE;
-      y_tmp = y_tmp + STEP_SIZE*odefun(t_mid, y_mid, theta, x_r, x_i);
-      t_tmp = t_tmp + STEP_SIZE;
-      y[i+1] = y_tmp;
+    y[1] = to_vector(y0);
+    for(i in 1:(R_n+1)){
+      y_mid = y[i] + 0.5*STEP_SIZE*odefun(t, y[i], theta, x_r, x_i);
+      y[i+1] = y[i] + STEP_SIZE*odefun(t + 0.5*STEP_SIZE, y_mid, theta, x_r, x_i);
+      t = t + STEP_SIZE;
     }
+    
     x = interpolate(y, INTERP_R, INTERP_A);
     return(x);
   }
