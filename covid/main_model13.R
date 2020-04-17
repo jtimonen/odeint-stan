@@ -12,8 +12,9 @@ source("functions.R")
 # Compile model
 #model <- stan_model(file = 'model13/model13_bdf.stan')
 #model <- stan_model(file = 'model13/model13_euler.stan')
-model <- stan_model(file = 'model13/model13_emp.stan')
+#model <- stan_model(file = 'model13/model13_emp.stan')
 #model <- stan_model(file = 'model13/model13_ab2.stan')
+model <- stan_model(file = 'model13/model13_rk4.stan')
 
 # Additional data for reference method ode_integrate_bdf
 data_list_model13$EPS           <- 1.0E-9
@@ -35,17 +36,11 @@ fit <- sampling(object  = model,
                 cores   = 1,
                 refresh = 10)
 
-# Helper function
-get_samples <- function(param){
-  samples <- as.vector(rstan::extract(fit, pars=param)[[param]])
-  return(samples)
-}
-
 # PSIS-loo
 lh1 <- get_samples('log_lik_na')
-lh2 <- get_samples('log_lik_na_GEN_')
+lh2 <- get_samples('log_lik_na_REF_')
 pr1 <- get_samples('log_prior_na')
-pr2 <- get_samples('log_prior_na_GEN_')
+pr2 <- get_samples('log_prior_na_REF_')
 post1 <- lh1 + pr1
 post2 <- lh2 + pr2
 

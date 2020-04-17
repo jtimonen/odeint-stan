@@ -57,3 +57,9 @@ plot_compartment <- function(fit, name='S', j=1, alpha = 0.2, color = 'steelblue
   p <- p + xlab('Day') + ylab('Size')
   return(p)
 }
+
+# Helper function
+get_samples <- function(param){
+  samples <- as.vector(rstan::extract(fit, pars=param)[[param]])
+  return(samples)
+}
