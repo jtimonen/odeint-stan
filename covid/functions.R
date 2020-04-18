@@ -6,7 +6,7 @@ add_interpolation_data <- function(data_list, h){
   A  <- compute_A(t0, ts, h, R)
   data_list$STEP_SIZE <- h
   data_list$INTERP_R  <- R
-  data_list$INTERP_A  <- round(A, digits=14)
+  data_list$INTERP_A  <- pmax(A, 0) # rounding errors can make A slightly negative though should be 0
   return(data_list)
 }
 

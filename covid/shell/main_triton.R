@@ -42,8 +42,14 @@ data_list_model13$rel_tol_REF_  <- 1.0E-10
 data_list_model13$max_iter_REF_ <- 1.0E6
 
 # Additional data needed if using a fixed-step solver
-cat("USING STEP SIZE", step_size, "\n")
+if(model_idx < 5){
+   cat("USING STEP SIZE", step_size, "\n")
+}else{
+  cat("USING AN ADAPTIVE STEP SIZE METHOD\n")
+}
+
 data_list_model13 <- add_interpolation_data(data_list_model13, step_size)
+
 
 # Create file name for saving
 ss <- gsub('[.]', '_', as.character(step_size))
